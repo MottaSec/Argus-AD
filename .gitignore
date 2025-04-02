@@ -31,6 +31,9 @@ tests/
 **/*.Tests.ps1
 mocks/
 
+# Vulnerability creation script - NEVER commit this!
+Create-TestVulnerabilities.ps1
+
 # IDE and editor files
 .idea/
 *.suo

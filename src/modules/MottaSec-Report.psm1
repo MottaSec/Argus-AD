@@ -32,8 +32,8 @@ function New-MottaSecReport {
         Path to the generated report directory.
     #>
     param (
-        [Parameter(Mandatory=$true)]
-        [array]$ResultsArray,
+        [Parameter(Mandatory=$false)]
+        [array]$ResultsArray = @(),
         
         [Parameter(Mandatory=$true)]
         [PSObject]$DomainInfo,
@@ -48,122 +48,155 @@ function New-MottaSecReport {
         [string]$OutputPath = "$PSScriptRoot\..\..\reports"
     )
     
-    Write-Host "[*] Generating Argus-AD reports..." -ForegroundColor Cyan
-    
-    # Create report directory
-    $reportTime = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
-    $reportDir = "$OutputPath\_$reportTime"
-    
-    if (-not (Test-Path -Path $reportDir)) {
-        New-Item -ItemType Directory -Path $reportDir -Force | Out-Null
-    }
-    
-    # Copy the logo to the report directory
-    $logoSource = "$PSScriptRoot\..\..\src\assets\argus-logo.svg"
-    $logoDestination = "$reportDir\argus-logo.svg"
-    if (Test-Path -Path $logoSource) {
-        Copy-Item -Path $logoSource -Destination $logoDestination -Force | Out-Null
-    }
-    else {
-        Write-Warning "Could not find logo at $logoSource"
-    }
-    
-    # Get scan duration
-    $scanDuration = (Get-Date) - $ScanStartTime
-    $scanDurationFormatted = $scanDuration.ToString('hh\:mm\:ss')
-    
-    # Count findings by severity
-    $criticalCount = ($ResultsArray | Where-Object { $_.Severity -eq "Critical" }).Count
-    $highCount = ($ResultsArray | Where-Object { $_.Severity -eq "High" }).Count
-    $mediumCount = ($ResultsArray | Where-Object { $_.Severity -eq "Medium" }).Count
-    $lowCount = ($ResultsArray | Where-Object { $_.Severity -eq "Low" }).Count
-    $infoCount = ($ResultsArray | Where-Object { $_.Severity -eq "Informational" -and -not $_.FailedCheck }).Count
-    
-    # Count findings by category
-    $simpleMisconfigCount = ($ResultsArray | Where-Object { $_.Category -eq "SimpleMisconfigurations" }).Count
-    $privEscCount = ($ResultsArray | Where-Object { $_.Category -eq "PrivilegeEscalation" }).Count
-    $lateralMovementCount = ($ResultsArray | Where-Object { $_.Category -eq "LateralMovement" }).Count
-    $hybridADCount = ($ResultsArray | Where-Object { $_.Category -eq "HybridAD" }).Count
-    
-    # Generate HTML report
-    $htmlReportPath = "$reportDir\Argus-AD_Report.html"
-    $htmlTemplate = Get-MottaSecHTMLReportTemplate
-    
-    # Replace placeholders
-    $htmlContent = $htmlTemplate
-    $htmlContent = $htmlContent.Replace('{{DOMAIN_NAME}}', $DomainInfo.DomainName)
-    $htmlContent = $htmlContent.Replace('{{DOMAIN_NETBIOS}}', $DomainInfo.DomainNetBIOSName)
-    $htmlContent = $htmlContent.Replace('{{SCAN_DATE}}', $ScanStartTime.ToString("yyyy-MM-dd HH:mm:ss"))
-    $htmlContent = $htmlContent.Replace('{{SCAN_DURATION}}', $scanDurationFormatted)
-    $htmlContent = $htmlContent.Replace('{{DC_COUNT}}', $DomainInfo.DomainControllers.Count)
-    $htmlContent = $htmlContent.Replace('{{DOMAIN_LEVEL}}', $DomainInfo.DomainFunctionalLevel)
-    $htmlContent = $htmlContent.Replace('{{FOREST_NAME}}', $DomainInfo.ForestName)
-    
-    # Stats
-    $htmlContent = $htmlContent.Replace('{{CRITICAL_COUNT}}', $criticalCount)
-    $htmlContent = $htmlContent.Replace('{{HIGH_COUNT}}', $highCount)
-    $htmlContent = $htmlContent.Replace('{{MEDIUM_COUNT}}', $mediumCount)
-    $htmlContent = $htmlContent.Replace('{{LOW_COUNT}}', $lowCount)
-    $htmlContent = $htmlContent.Replace('{{INFO_COUNT}}', $infoCount)
-    
-    $htmlContent = $htmlContent.Replace('{{SIMPLE_MISCONFIG_COUNT}}', $simpleMisconfigCount)
-    $htmlContent = $htmlContent.Replace('{{PRIVESC_COUNT}}', $privEscCount)
-    $htmlContent = $htmlContent.Replace('{{LATERAL_MOVEMENT_COUNT}}', $lateralMovementCount)
-    $htmlContent = $htmlContent.Replace('{{HYBRID_AD_COUNT}}', $hybridADCount)
-    
-    # AAD Connect info
-    $aadConnectStatus = if ($DomainInfo.IsAzureADConnectConfigured) { "Detected" } else { "Not Detected" }
-    $htmlContent = $htmlContent.Replace('{{AAD_CONNECT_STATUS}}', $aadConnectStatus)
-    
-    # Add failed checks warning if applicable
-    $failedChecksWarning = ""
-    if ($FailedChecks.Count -gt 0) {
-        $failedChecksWarning = @"
+    try {
+        # Ensure we have a valid results array
+        if ($null -eq $ResultsArray) {
+            Write-Warning "ResultsArray was null. Creating empty array."
+            $ResultsArray = @()
+        }
+        
+        # If no findings and no failed checks, create a placeholder finding
+        if ($ResultsArray.Count -eq 0 -and $FailedChecks.Count -eq 0) {
+            Write-Host "No findings to report and no failed checks. Creating empty report." -ForegroundColor Yellow
+            # Create at least one informational finding to allow report generation
+            $ResultsArray = @(
+                [PSCustomObject]@{
+                    Category = "SimpleMisconfigurations"
+                    Subcategory = "Scan Results"
+                    Severity = "Informational"
+                    Description = "No security issues were detected in this scan."
+                    Impact = "No negative security impact was detected."
+                    AegisRemediation = "No remediation needed at this time."
+                    RawData = $null
+                    FailedCheck = $false
+                }
+            )
+        }
+        
+        Write-Host "[*] Generating Argus-AD reports..." -ForegroundColor Cyan
+        Write-Host "[*] Processing $($ResultsArray.Count) findings for report." -ForegroundColor Cyan
+        
+        # Create report directory with timestamp
+        $reportTime = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
+        $reportDir = "$OutputPath\$($DomainInfo.DomainName)_$reportTime"
+        
+        # Ensure the directory exists
+        if (-not (Test-Path -Path $reportDir)) {
+            New-Item -ItemType Directory -Path $reportDir -Force | Out-Null
+        }
+        
+        # Define report file paths
+        $htmlReportPath = "$reportDir\Argus-AD_Report.html"
+        $csvReportPath = "$reportDir\Argus-AD_Report.csv"
+        $execSummaryPath = "$reportDir\Argus-AD_ExecutiveSummary.txt"
+        
+        # Copy the logo to the report directory
+        $logoSource = "$PSScriptRoot\..\..\src\assets\argus-logo.svg"
+        $logoDestination = "$reportDir\argus-logo.svg"
+        if (Test-Path -Path $logoSource) {
+            Copy-Item -Path $logoSource -Destination $logoDestination -Force | Out-Null
+        }
+        else {
+            Write-Warning "Could not find logo at $logoSource"
+        }
+        
+        # Calculate scan duration
+        $scanDuration = (Get-Date) - $ScanStartTime
+        $scanDurationFormatted = $scanDuration.ToString('hh\:mm\:ss')
+        
+        # Count findings by severity
+        $criticalCount = ($ResultsArray | Where-Object { $_.Severity -eq "Critical" }).Count
+        $highCount = ($ResultsArray | Where-Object { $_.Severity -eq "High" }).Count
+        $mediumCount = ($ResultsArray | Where-Object { $_.Severity -eq "Medium" }).Count
+        $lowCount = ($ResultsArray | Where-Object { $_.Severity -eq "Low" }).Count
+        $infoCount = ($ResultsArray | Where-Object { $_.Severity -eq "Informational" -and -not $_.FailedCheck }).Count
+        
+        # Count findings by category
+        $simpleMisconfigCount = ($ResultsArray | Where-Object { $_.Category -eq "SimpleMisconfigurations" }).Count
+        $privEscCount = ($ResultsArray | Where-Object { $_.Category -eq "PrivilegeEscalation" }).Count
+        $lateralMovementCount = ($ResultsArray | Where-Object { $_.Category -eq "LateralMovement" }).Count
+        $hybridADCount = ($ResultsArray | Where-Object { $_.Category -eq "HybridAD" }).Count
+        
+        #
+        # Generate HTML Report
+        #
+        $htmlTemplate = Get-MottaSecHTMLReportTemplate
+        
+        # Replace placeholders in HTML template
+        $htmlContent = $htmlTemplate
+        $htmlContent = $htmlContent.Replace('{{DOMAIN_NAME}}', $DomainInfo.DomainName)
+        $htmlContent = $htmlContent.Replace('{{DOMAIN_NETBIOS}}', $DomainInfo.DomainNetBIOSName)
+        $htmlContent = $htmlContent.Replace('{{SCAN_DATE}}', $ScanStartTime.ToString("yyyy-MM-dd HH:mm:ss"))
+        $htmlContent = $htmlContent.Replace('{{SCAN_DURATION}}', $scanDurationFormatted)
+        $htmlContent = $htmlContent.Replace('{{DC_COUNT}}', $DomainInfo.DomainControllers.Count)
+        $htmlContent = $htmlContent.Replace('{{DOMAIN_LEVEL}}', $DomainInfo.DomainFunctionalLevel)
+        $htmlContent = $htmlContent.Replace('{{FOREST_NAME}}', $DomainInfo.ForestName)
+        
+        # Stats
+        $htmlContent = $htmlContent.Replace('{{CRITICAL_COUNT}}', $criticalCount)
+        $htmlContent = $htmlContent.Replace('{{HIGH_COUNT}}', $highCount)
+        $htmlContent = $htmlContent.Replace('{{MEDIUM_COUNT}}', $mediumCount)
+        $htmlContent = $htmlContent.Replace('{{LOW_COUNT}}', $lowCount)
+        $htmlContent = $htmlContent.Replace('{{INFO_COUNT}}', $infoCount)
+        
+        $htmlContent = $htmlContent.Replace('{{SIMPLE_MISCONFIG_COUNT}}', $simpleMisconfigCount)
+        $htmlContent = $htmlContent.Replace('{{PRIVESC_COUNT}}', $privEscCount)
+        $htmlContent = $htmlContent.Replace('{{LATERAL_MOVEMENT_COUNT}}', $lateralMovementCount)
+        $htmlContent = $htmlContent.Replace('{{HYBRID_AD_COUNT}}', $hybridADCount)
+        
+        # AAD Connect info
+        $aadConnectStatus = if ($DomainInfo.IsAzureADConnectConfigured) { "Detected" } else { "Not Detected" }
+        $htmlContent = $htmlContent.Replace('{{AAD_CONNECT_STATUS}}', $aadConnectStatus)
+        
+        # Add failed checks warning if applicable
+        $failedChecksWarning = ""
+        if ($FailedChecks.Count -gt 0) {
+            $failedChecksWarning = @"
 <div class="warning-alert">
     <h3>⚠️ Warning: Some checks failed to complete</h3>
     <p>The following checks did not complete successfully:</p>
     <ul>
 "@
-        foreach ($failedCheck in $FailedChecks) {
-            $failedChecksWarning += "<li>$failedCheck</li>"
-        }
-        
-        $failedChecksWarning += @"
+            foreach ($failedCheck in $FailedChecks) {
+                $failedChecksWarning += "<li>$failedCheck</li>"
+            }
+            
+            $failedChecksWarning += @"
     </ul>
     <p>Some security issues may not have been detected due to these failures.</p>
 </div>
 "@
-    }
-    $htmlContent = $htmlContent.Replace('{{FAILED_CHECKS_WARNING}}', $failedChecksWarning)
-    
-    # Generate findings HTML
-    $findingsHTML = ""
-    
-    # Group findings by category
-    $findingsByCategory = $ResultsArray | Where-Object { -not $_.FailedCheck } | Group-Object -Property Category
-    
-    foreach ($category in $findingsByCategory) {
-        $categoryName = $category.Name
-        $categoryDisplayName = switch ($categoryName) {
-            "SimpleMisconfigurations" { "Simple Misconfigurations" }
-            "PrivilegeEscalation" { "Privilege Escalation Paths" }
-            "LateralMovement" { "Lateral Movement Opportunities" }
-            "HybridAD" { "Hybrid/Cloud AD Issues" }
-            default { $categoryName }
         }
+        $htmlContent = $htmlContent.Replace('{{FAILED_CHECKS_WARNING}}', $failedChecksWarning)
         
-        $findingsHTML += "<div class='category-section'><h2>$categoryDisplayName</h2>"
+        # Generate findings HTML
+        $findingsHTML = ""
         
-        # Group by subcategory within this category
-        $findingsBySubcategory = $category.Group | Group-Object -Property Subcategory
+        # Group findings by category
+        $findingsByCategory = $ResultsArray | Where-Object { -not $_.FailedCheck } | Group-Object -Property Category
         
-        foreach ($subcategory in $findingsBySubcategory) {
-            $subcategoryName = $subcategory.Name
-            $finding = $subcategory.Group[0] # Take the first finding in this subcategory
+        foreach ($category in $findingsByCategory) {
+            $categoryName = $category.Name
+            $categoryDisplayName = switch ($categoryName) {
+                "SimpleMisconfigurations" { "Simple Misconfigurations" }
+                "PrivilegeEscalation" { "Privilege Escalation Paths" }
+                "LateralMovement" { "Lateral Movement Opportunities" }
+                "HybridAD" { "Hybrid/Cloud AD Issues" }
+                default { $categoryName }
+            }
             
-            $severityClass = "severity-$($finding.Severity.ToLower())"
+            $findingsHTML += "<div class='category-section'><h2>$categoryDisplayName</h2>"
             
-            $findingsHTML += @"
+            # Group by subcategory within this category
+            $findingsBySubcategory = $category.Group | Group-Object -Property Subcategory
+            
+            foreach ($subcategory in $findingsBySubcategory) {
+                $subcategoryName = $subcategory.Name
+                $finding = $subcategory.Group[0] # Take the first finding in this subcategory
+                
+                $severityClass = "severity-$($finding.Severity.ToLower())"
+                
+                $findingsHTML += @"
 <div class="finding-card">
     <div class="finding-header $severityClass">
         <span class="severity-badge">$($finding.Severity)</span>
@@ -176,20 +209,20 @@ function New-MottaSecReport {
     </div>
 </div>
 "@
+            }
+            
+            $findingsHTML += "</div>"
         }
         
-        $findingsHTML += "</div>"
-    }
-    
-    # Add failed checks section if there are any
-    if ($FailedChecks.Count -gt 0) {
-        $findingsHTML += "<div class='category-section'><h2>Scan Status Issues</h2>"
-        
-        # Get the failed check findings
-        $failedCheckFindings = $ResultsArray | Where-Object { $_.FailedCheck }
-        
-        foreach ($finding in $failedCheckFindings) {
-            $findingsHTML += @"
+        # Add failed checks section if there are any
+        if ($FailedChecks.Count -gt 0) {
+            $findingsHTML += "<div class='category-section'><h2>Scan Status Issues</h2>"
+            
+            # Get the failed check findings
+            $failedCheckFindings = $ResultsArray | Where-Object { $_.FailedCheck }
+            
+            foreach ($finding in $failedCheckFindings) {
+                $findingsHTML += @"
 <div class="finding-card">
     <div class="finding-header severity-informational">
         <span class="severity-badge">Failed Check</span>
@@ -202,24 +235,17 @@ function New-MottaSecReport {
     </div>
 </div>
 "@
+            }
+            
+            $findingsHTML += "</div>"
         }
         
-        $findingsHTML += "</div>"
-    }
-    
-    $htmlContent = $htmlContent.Replace('{{FINDINGS_CONTENT}}', $findingsHTML)
-    
-    # Write HTML report
-    $htmlContent | Out-File -FilePath $htmlReportPath -Encoding utf8
-    
-    # Generate CSV report
-    $csvReportPath = "$reportDir\Argus-AD_Report.csv"
-    $ResultsArray | Select-Object Category, Subcategory, Severity, Description, Impact, AegisRemediation |
-        Export-Csv -Path $csvReportPath -NoTypeInformation
-    
-    # Generate executive summary
-    $execSummaryPath = "$reportDir\Argus-AD_ExecutiveSummary.txt"
-    $execSummary = @"
+        $htmlContent = $htmlContent.Replace('{{FINDINGS_CONTENT}}', $findingsHTML)
+        
+        #
+        # Generate Executive Summary
+        #
+        $execSummary = @"
 Argus-AD Security Assessment - Executive Summary
 ===============================================
 
@@ -245,44 +271,44 @@ By Category:
 - Hybrid/Cloud AD Issues: $hybridADCount
 "@
 
-    # Add failed checks section to executive summary if applicable
-    if ($FailedChecks.Count -gt 0) {
-        $execSummary += @"
+        # Add failed checks section to executive summary if applicable
+        if ($FailedChecks.Count -gt 0) {
+            $execSummary += @"
 
 SCAN COMPLETION STATUS
 =====================
 Warning: The following checks did not complete successfully:
 "@
 
-        foreach ($failedCheck in $FailedChecks) {
-            $execSummary += @"
+            foreach ($failedCheck in $FailedChecks) {
+                $execSummary += @"
 - $failedCheck
+"@
+            }
+
+            $execSummary += @"
+Some security issues may not have been detected due to these failures.
 "@
         }
 
         $execSummary += @"
-Some security issues may not have been detected due to these failures.
-"@
-    }
-
-    $execSummary += @"
 
 TOP CRITICAL/HIGH FINDINGS
 ========================
 "@
-    
-    # Add top 5 critical/high findings
-    $topFindings = $ResultsArray | Where-Object { ($_.Severity -eq "Critical" -or $_.Severity -eq "High") -and -not $_.FailedCheck } | Select-Object -First 5
-    
-    foreach ($finding in $topFindings) {
-        $execSummary += @"
+        
+        # Add top 5 critical/high findings
+        $topFindings = $ResultsArray | Where-Object { ($_.Severity -eq "Critical" -or $_.Severity -eq "High") -and -not $_.FailedCheck } | Select-Object -First 5
+        
+        foreach ($finding in $topFindings) {
+            $execSummary += @"
 
 [$($finding.Severity)] $($finding.Subcategory)
 Description: $($finding.Description)
 "@
-    }
-    
-    $execSummary += @"
+        }
+        
+        $execSummary += @"
 
 NEXT STEPS
 =========
@@ -292,26 +318,41 @@ our comprehensive Active Directory security hardening solution.
 
 Contact: info@mottasec.com
 "@
-    
-    # Write executive summary
-    $execSummary | Out-File -FilePath $execSummaryPath -Encoding utf8
-    
-    # Write files
-    Set-Content -Path $htmlReportPath -Value $htmlContent
-    Export-Csv -Path $csvReportPath -InputObject $reportData -NoTypeInformation
-    Set-Content -Path $execSummaryPath -Value $executiveSummary
-    
-    Write-Host "[+] Reports generated successfully:" -ForegroundColor Green
-    Write-Host "    - Executive Summary: $execSummaryPath" -ForegroundColor Cyan
-    Write-Host "    - CSV Report: $csvReportPath" -ForegroundColor Cyan
-    Write-Host "    - HTML Report: $htmlReportPath" -ForegroundColor Cyan
-    
-    # Return an object with the report paths
-    return [PSCustomObject]@{
-        ReportPath = $reportDir
-        SummaryPath = $execSummaryPath
-        CSVPath = $csvReportPath
-        HTMLPath = $htmlReportPath
+        
+        # Write all reports to disk
+        try {
+            # Write executive summary
+            $execSummary | Out-File -FilePath $execSummaryPath -Encoding utf8
+            
+            # Write HTML report
+            $htmlContent | Out-File -FilePath $htmlReportPath -Encoding utf8
+            
+            # Write CSV report
+            $ResultsArray | Select-Object Category, Subcategory, Severity, Description, Impact, AegisRemediation |
+                Export-Csv -Path $csvReportPath -NoTypeInformation
+            
+            Write-Host "[+] Reports generated successfully:" -ForegroundColor Green
+            Write-Host "    - Executive Summary: $execSummaryPath" -ForegroundColor Cyan
+            Write-Host "    - CSV Report: $csvReportPath" -ForegroundColor Cyan
+            Write-Host "    - HTML Report: $htmlReportPath" -ForegroundColor Cyan
+            
+            # Return an object with the report paths
+            return [PSCustomObject]@{
+                ReportPath = $reportDir
+                SummaryPath = $execSummaryPath
+                CSVPath = $csvReportPath
+                HTMLPath = $htmlReportPath
+            }
+        }
+        catch {
+            Write-Host "Error writing report files: $($_.Exception.Message)" -ForegroundColor Red
+            throw
+        }
+    }
+    catch {
+        Write-Host "Error in New-MottaSecReport: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Stack trace: $($_.ScriptStackTrace)" -ForegroundColor Red
+        throw
     }
 }
 

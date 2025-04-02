@@ -102,6 +102,9 @@ function Invoke-ArgusAD {
     # Array to track failed checks
     $failedChecks = @()
     
+    # Initialize all findings array
+    $allFindings = @()
+    
     Write-Host "===============================================================" -ForegroundColor Cyan
     Write-Host "              Argus-AD Security Assessment Tool" -ForegroundColor Cyan
     Write-Host "                         by MottaSec" -ForegroundColor Cyan
@@ -178,9 +181,6 @@ function Invoke-ArgusAD {
         }
     }
     Write-Host ""
-    
-    # All findings across all scans
-    $allFindings = @()
     
     # Function to update and display module status
     function Update-ModuleStatus {
@@ -362,15 +362,36 @@ function Invoke-ArgusAD {
         Write-Host "                   Generating Reports" -ForegroundColor Cyan
         Write-Host "===============================================================" -ForegroundColor Cyan
         
-        # Create timestamped report directory
-        $reportDir = Join-Path -Path $OutputPath -ChildPath "_$(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss')"
-        New-Item -ItemType Directory -Path $reportDir -Force | Out-Null
+        # Ensure OutputPath exists
+        if (-not (Test-Path -Path $OutputPath)) {
+            New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
+            Write-Host "[+] Created output directory: $OutputPath" -ForegroundColor Green
+        }
         
-        # Generate reports
-        Write-Host "[*] Generating Argus-AD reports..." -ForegroundColor Cyan
+        # Debug information
+        Write-Host "[DEBUG] All findings count: $($allFindings.Count)" -ForegroundColor Yellow
+        Write-Host "[DEBUG] Failed checks count: $($failedChecks.Count)" -ForegroundColor Yellow
+        if ($domainInfo) {
+            Write-Host "[DEBUG] Domain Info: $($domainInfo.DomainName)" -ForegroundColor Yellow
+        } else {
+            Write-Host "[DEBUG] Domain Info is NULL" -ForegroundColor Red
+        }
         
-        # Call the reporting module
-        $reportResult = New-MottaSecReport -ResultsArray $allFindings -DomainInfo $domainInfo -ScanStartTime $scanStartTime -FailedChecks $failedChecks -OutputPath $reportDir
+        # Ensure findings array is an actual array before passing it
+        if ($null -eq $allFindings) {
+            Write-Host "Findings array is null, creating empty array" -ForegroundColor Yellow
+            $allFindings = @()
+        }
+        
+        # Convert findings to a proper array to avoid PowerShell array conversion issues
+        $findingsArray = @($allFindings)
+        
+        # Final debug check before calling report function
+        Write-Host "[DEBUG] Final findings array type: $($findingsArray.GetType().FullName)" -ForegroundColor Yellow
+        Write-Host "[DEBUG] Final findings array count: $($findingsArray.Count)" -ForegroundColor Yellow
+        
+        # Call the reporting module with explicit array
+        $reportResult = New-MottaSecReport -ResultsArray $findingsArray -DomainInfo $domainInfo -ScanStartTime $scanStartTime -FailedChecks $failedChecks -OutputPath $OutputPath
         
         Write-Host "[+] Reports generated successfully:" -ForegroundColor Green
         Write-Host "    - Executive Summary: $($reportResult.SummaryPath)" -ForegroundColor Cyan
@@ -382,6 +403,8 @@ function Invoke-ArgusAD {
     }
     catch {
         Write-Host "Error generating reports: ${_}" -ForegroundColor Red
+        Write-Host "Exception details: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Stack trace: $($_.ScriptStackTrace)" -ForegroundColor Red
         $failedChecks += "Report Generation"
     }
     
@@ -431,7 +454,7 @@ function Invoke-ArgusAD {
     return [PSCustomObject]@{
         DomainInfo = $domainInfo
         Findings = $allFindings
-        ReportPath = $reportDir
+        ReportPath = $OutputPath
         ScanStartTime = $scanStartTime
         ScanEndTime = $scanEndTime
         ScanDuration = $scanDuration

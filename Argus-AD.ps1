@@ -7,7 +7,7 @@
 
 param (
     [Parameter(Mandatory=$false)]
-    [string]$DomainName,
+    [string]$Domain,
     
     [Parameter(Mandatory=$false)]
     [switch]$SkipSimpleMisconfigurations,
@@ -59,8 +59,8 @@ if (-not $moduleImported) {
 # Build the parameter hashtable for splatting
 $parameters = @{}
 
-if ($PSBoundParameters.ContainsKey('DomainName')) {
-    $parameters['DomainName'] = $DomainName
+if ($PSBoundParameters.ContainsKey('Domain')) {
+    $parameters['DomainName'] = $Domain
 }
 
 if ($PSBoundParameters.ContainsKey('OutputPath')) {
