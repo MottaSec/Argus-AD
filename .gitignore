@@ -1,0 +1,41 @@
+# Ignore reports directory
+
+# Ignore PowerShell user profile data
+*.psprofile
+
+# Ignore Visual Studio Code files
+.vscode/
+*.code-workspace
+
+# Ignore Windows file system files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Ignore Mac file system files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Ignore PowerShell logs
+*.log
+
+# Ignore module temp files
+*.tmp
+
+# Test directories and files
+tests/
+**/Test-*.ps1
+**/*.Tests.ps1
+mocks/
+
+# IDE and editor files
+.idea/
+*.suo
+*.user
+*.sln.docstates
+
+# PowerShell module files
+*.psd1 

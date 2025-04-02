@@ -1,0 +1,49 @@
+Argus-AD Security Assessment - Executive Summary
+===============================================
+
+Domain: contoso.com
+Scan Date: 2025-04-01 09:30:45
+Scan Duration: 00:24:32
+
+FINDINGS SUMMARY
+===============
+Total Issues Found: 28
+
+By Severity:
+- Critical: 3
+- High: 12
+- Medium: 8
+- Low: 3
+- Informational: 2
+
+By Category:
+- Simple Misconfigurations: 14
+- Privilege Escalation Paths: 6
+- Lateral Movement Opportunities: 5
+- Hybrid/Cloud AD Issues: 3
+
+TOP CRITICAL/HIGH FINDINGS
+========================
+
+[Critical] LAPS Not Deployed on Servers
+Description: LAPS (Local Administrator Password Solution) is not deployed on any of the 42 member servers in the domain.
+
+[Critical] KRBTGT with ServicePrincipalNames
+Description: The KRBTGT account has ServicePrincipalNames (SPNs) assigned, making it potentially vulnerable to Kerberoasting.
+
+[Critical] DCSync Rights for Non-Administrative Accounts
+Description: 2 non-administrative accounts have been granted DCSync rights, allowing them to perform domain controller replication operations.
+
+[High] Domain Admin Sessions on Non-Tier 0 Systems
+Description: Domain Administrators are logging into non-Tier 0 systems, violating the principle of privileged access workstation usage.
+
+[High] Dangerous RDP Rights
+Description: Found 3 Group Policy Objects that grant Remote Desktop access to overly broad groups like 'Everyone', 'Authenticated Users', or 'Domain Users'.
+
+NEXT STEPS
+=========
+The findings in this report indicate several security issues that need to be addressed.
+For assistance in remediating these issues, contact MottaSec to learn about AEGIS-AD,
+our comprehensive Active Directory security hardening solution.
+
+Contact: info@mottasec.com 

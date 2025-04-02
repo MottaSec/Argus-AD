@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="500" height="500" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shield background -->
+  <path d="M250 30 L450 120 L450 280 Q450 400 250 470 Q50 400 50 280 L50 120 Z" 
+        fill="#0a1a2f" stroke="#05d7ff" stroke-width="4" opacity="0.95"/>
+  
+  <!-- Digital circuit lines -->
+  <g stroke="#05d7ff" stroke-width="1.5" opacity="0.6">
+    <!-- Horizontal lines -->
+    <path d="M100 180 L170 180 L190 160 L310 160 L330 180 L400 180" fill="none"/>
+    <path d="M120 280 L160 280 L180 300 L320 300 L340 280 L380 280" fill="none"/>
+    <!-- Vertical lines -->
+    <path d="M160 180 L160 130" fill="none"/>
+    <path d="M340 180 L340 130" fill="none"/>
+    <path d="M160 280 L160 340" fill="none"/>
+    <path d="M340 280 L340 340" fill="none"/>
+    <!-- Connection nodes -->
+    <circle cx="160" cy="180" r="3" fill="#05d7ff"/>
+    <circle cx="340" cy="180" r="3" fill="#05d7ff"/>
+    <circle cx="160" cy="280" r="3" fill="#05d7ff"/>
+    <circle cx="340" cy="280" r="3" fill="#05d7ff"/>
+    <circle cx="160" cy="130" r="3" fill="#05d7ff"/>
+    <circle cx="340" cy="130" r="3" fill="#05d7ff"/>
+    <circle cx="160" cy="340" r="3" fill="#05d7ff"/>
+    <circle cx="340" cy="340" r="3" fill="#05d7ff"/>
+  </g>
+  
+  <!-- Eye base -->
+  <ellipse cx="250" cy="230" rx="130" ry="100" fill="#0a1a2f" stroke="#05d7ff" stroke-width="3"/>
+  
+  <!-- Concentric scanning rings -->
+  <ellipse cx="250" cy="230" rx="110" ry="85" fill="none" stroke="#05d7ff" stroke-width="1.5" opacity="0.7"/>
+  <ellipse cx="250" cy="230" rx="90" ry="70" fill="none" stroke="#05d7ff" stroke-width="1.5" opacity="0.8"/>
+  <ellipse cx="250" cy="230" rx="70" ry="55" fill="none" stroke="#05d7ff" stroke-width="1.5" opacity="0.9"/>
+  
+  <!-- Scanning animation -->
+  <ellipse cx="250" cy="230" rx="130" ry="100" fill="none" stroke="#05d7ff" stroke-width="2" opacity="0.5">
+    <animate attributeName="stroke-opacity" values="0.1;0.7;0.1" dur="3s" repeatCount="indefinite"/>
+    <animate attributeName="rx" values="130;135;130" dur="3s" repeatCount="indefinite"/>
+    <animate attributeName="ry" values="100;105;100" dur="3s" repeatCount="indefinite"/>
+  </ellipse>
+  
+  <!-- Iris -->
+  <circle cx="250" cy="230" r="40" fill="#0c3658" stroke="#05d7ff" stroke-width="2"/>
+  
+  <!-- Pupil -->
+  <circle cx="250" cy="230" r="20" fill="#05d7ff">
+    <animate attributeName="r" values="18;20;18" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Light reflection -->
+  <circle cx="265" cy="215" r="7" fill="white" opacity="0.8"/>
+  <circle cx="235" cy="240" r="4" fill="white" opacity="0.5"/>
+  
+  <!-- Scanning lines -->
+  <line x1="250" y1="130" x2="250" y2="330" stroke="#05d7ff" stroke-width="1" opacity="0.6">
+    <animate attributeName="y1" values="130;150;130" dur="4s" repeatCount="indefinite"/>
+    <animate attributeName="y2" values="330;310;330" dur="4s" repeatCount="indefinite"/>
+  </line>
+  <line x1="120" y1="230" x2="380" y2="230" stroke="#05d7ff" stroke-width="1" opacity="0.6">
+    <animate attributeName="x1" values="120;140;120" dur="4s" repeatCount="indefinite"/>
+    <animate attributeName="x2" values="380;360;380" dur="4s" repeatCount="indefinite"/>
+  </line>
+</svg> 

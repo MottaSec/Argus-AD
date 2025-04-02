@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Argus-AD Security Assessment Report</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e67e22;
+            --light-color: #ecf0f1;
+            --dark-color: #34495e;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --info-color: #3498db;
+            --critical-color: #c0392b;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            width: 95%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+        
+        .logo-title {
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo {
+            width: 60px;
+            height: 60px;
+            margin-right: 15px;
+        }
+        
+        h1 {
+            margin: 0;
+            font-size: 1.8em;
+        }
+        
+        .timestamp {
+            text-align: right;
+            font-size: 0.9em;
+        }
+        
+        .summary-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .summary-card {
+            flex: 1;
+            min-width: 250px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .summary-title {
+            margin-top: 0;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 10px;
+        }
+        
+        .domain-info {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        
+        .domain-info div {
+            flex: 1;
+            min-width: 200px;
+            margin-bottom: 15px;
+        }
+        
+        .domain-info strong {
+            color: var(--dark-color);
+        }
+        
+        .severity-stats {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .severity-item {
+            text-align: center;
+            padding: 10px;
+            flex: 1;
+            min-width: 70px;
+            border-radius: 4px;
+            color: white;
+        }
+        
+        .severity-critical {
+            background-color: var(--critical-color);
+        }
+        
+        .severity-high {
+            background-color: var(--danger-color);
+        }
+        
+        .severity-medium {
+            background-color: var(--warning-color);
+        }
+        
+        .severity-low {
+            background-color: var(--info-color);
+        }
+        
+        .severity-informational {
+            background-color: #7f8c8d;
+        }
+        
+        .category-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .category-item {
+            flex: 1;
+            min-width: 140px;
+            padding: 10px;
+            background-color: var(--secondary-color);
+            color: white;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .findings-section {
+            margin-top: 30px;
+        }
+        
+        .category-section {
+            margin-bottom: 30px;
+        }
+        
+        .category-section h2 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 10px;
+        }
+        
+        .finding-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .finding-header {
+            padding: 15px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .finding-header h3 {
+            margin: 0;
+            font-size: 1.2em;
+        }
+        
+        .severity-badge {
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .finding-content {
+            padding: 15px;
+        }
+        
+        .finding-content p {
+            margin: 10px 0;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 8px;
+        }
+        
+        .footer a {
+            color: var(--light-color);
+        }
+        
+        .contact-info {
+            margin-top: 20px;
+            background-color: var(--accent-color);
+            padding: 15px;
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+        }
+        
+        .warning-alert {
+            background-color: var(--warning-color);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .warning-alert h3 {
+            margin-top: 0;
+        }
+        
+        .warning-alert ul {
+            margin-bottom: 0;
+        }
+        
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .logo-title {
+                margin-bottom: 15px;
+            }
+            
+            .timestamp {
+                text-align: center;
+            }
+            
+            .severity-item, .category-item {
+                min-width: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <div class="logo-title">
+                    <img src="argus-logo.svg" class="logo" alt="Argus-AD Logo">
+                    <div>
+                        <h1>Argus-AD Security Assessment</h1>
+                        <p>Comprehensive Active Directory Security Report</p>
+                    </div>
+                </div>
+                <div class="timestamp">
+                    <p>Scan Date: 2025-04-01 09:30:45</p>
+                    <p>Scan Duration: 00:24:32</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="summary-section">
+            <div class="summary-card">
+                <h2 class="summary-title">Domain Information</h2>
+                <div class="domain-info">
+                    <div>
+                        <p><strong>Domain Name:</strong> contoso.com</p>
+                        <p><strong>NetBIOS Name:</strong> CONTOSO</p>
+                    </div>
+                    <div>
+                        <p><strong>Domain Controllers:</strong> 3</p>
+                        <p><strong>Functional Level:</strong> Windows Server 2016</p>
+                    </div>
+                    <div>
+                        <p><strong>Forest:</strong> contoso.com</p>
+                        <p><strong>Azure AD Connect:</strong> Detected</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="summary-card">
+                <h2 class="summary-title">Findings by Severity</h2>
+                <div class="severity-stats">
+                    <div class="severity-item severity-critical">
+                        <div class="severity-count">3</div>
+                        <div>Critical</div>
+                    </div>
+                    <div class="severity-item severity-high">
+                        <div class="severity-count">12</div>
+                        <div>High</div>
+                    </div>
+                    <div class="severity-item severity-medium">
+                        <div class="severity-count">8</div>
+                        <div>Medium</div>
+                    </div>
+                    <div class="severity-item severity-low">
+                        <div class="severity-count">3</div>
+                        <div>Low</div>
+                    </div>
+                    <div class="severity-item severity-informational">
+                        <div class="severity-count">2</div>
+                        <div>Info</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="summary-section">
+            <div class="summary-card">
+                <h2 class="summary-title">Findings by Category</h2>
+                <div class="category-stats">
+                    <div class="category-item">
+                        <div class="category-count">14</div>
+                        <div>Simple Misconfigurations</div>
+                    </div>
+                    <div class="category-item">
+                        <div class="category-count">6</div>
+                        <div>Privilege Escalation</div>
+                    </div>
+                    <div class="category-item">
+                        <div class="category-count">5</div>
+                        <div>Lateral Movement</div>
+                    </div>
+                    <div class="category-item">
+                        <div class="category-count">3</div>
+                        <div>Hybrid/Cloud AD</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="contact-info">
+            <h3>Need help securing your Active Directory?</h3>
+            <p>Contact MottaSec to learn about AEGIS-AD, our comprehensive Active Directory security hardening solution.</p>
+        </div>
+        
+        <div class="findings-section">
+            <h2>Detailed Findings</h2>
+            
+            <!-- Simple Misconfigurations -->
+            <div class='category-section'><h2>Simple Misconfigurations</h2>
+                <div class="finding-card">
+                    <div class="finding-header severity-critical">
+                        <span class="severity-badge">Critical</span>
+                        <h3>LAPS Not Deployed on Servers</h3>
+                    </div>
+                    <div class="finding-content">
+                        <p><strong>Description:</strong> LAPS (Local Administrator Password Solution) is not deployed on any of the 42 member servers in the domain.</p>
+                        <p><strong>Impact:</strong> Without LAPS, local administrator passwords may be the same across servers, allowing lateral movement if one server is compromised. This is particularly dangerous in server environments.</p>
+                        <p><strong>AEGIS-AD Remediation:</strong> AEGIS-AD can deploy and configure LAPS across all member servers to ensure unique, regularly rotated local administrator passwords.</p>
+                    </div>
+                </div>
+                
+                <div class="finding-card">
+                    <div class="finding-header severity-critical">
+                        <span class="severity-badge">Critical</span>
+                        <h3>KRBTGT with ServicePrincipalNames</h3>
+                    </div>
+                    <div class="finding-content">
+                        <p><strong>Description:</strong> The KRBTGT account has ServicePrincipalNames (SPNs) assigned, making it potentially vulnerable to Kerberoasting.</p>
+                        <p><strong>Impact:</strong> If the KRBTGT account is Kerberoastable, attackers could potentially extract and crack its password hash, leading to complete domain compromise via Golden Ticket attacks.</p>
+                        <p><strong>AEGIS-AD Remediation:</strong> AEGIS-AD will remove any unnecessary SPNs from the KRBTGT account and ensure it is properly secured.</p>
+                    </div>
+                </div>
+                
+                <div class="finding-card">
+                    <div class="finding-header severity-high">
+                        <span class="severity-badge">High</span>
+                        <h3>Domain Admin Sessions on Non-Tier 0 Systems</h3>
+                    </div>
+                    <div class="finding-content">
+                        <p><strong>Description:</strong> Domain Administrators are logging into non-Tier 0 systems, violating the principle of privileged access workstation usage.</p>
+                        <p><strong>Impact:</strong> When Domain Admins log into lower-tier systems, their credentials are cached and can be extracted if those systems are compromised, potentially leading to domain compromise.</p>
+                        <p><strong>AEGIS-AD Remediation:</strong> AEGIS-AD can implement and enforce a tiered administration model with proper Privileged Access Workstations (PAWs) for administrative activities.</p>
+                    </div>
+                </div>
+                
+                <div class="finding-card">
+                    <div class="finding-header severity-high">
+                        <span class="severity-badge">High</span>
+                        <h3>Dangerous RDP Rights</h3>
+                    </div>
+                    <div class="finding-content">
+                        <p><strong>Description:</strong> Found 3 Group Policy Objects that grant Remote Desktop access to overly broad groups like 'Everyone', 'Authenticated Users', or 'Domain Users'.</p>
+                        <p><strong>Impact:</strong> Granting RDP access to broad groups significantly increases the attack surface for lateral movement and can allow attackers to move throughout the network once they've compromised a single account.</p>
+                        <p><strong>AEGIS-AD Remediation:</strong> AEGIS-AD can reconfigure Remote Desktop permissions to follow the principle of least privilege, restricting access to only necessary administrative or support accounts.</p>
+                    </div>
+                </div>
+                
+                <div class="finding-card">
+                    <div class="finding-header severity-high">
+                        <span class="severity-badge">High</span>
+                        <h3>RDP Not Hardened</h3>
+                    </div>
+                    <div class="finding-content">
+                        <p><strong>Description:</strong> No Group Policy Objects were found that harden Remote Desktop Protocol (RDP) security settings.</p>
+                        <p><strong>Impact:</strong> Without proper RDP hardening, connections may use weaker encryption and authentication methods, making them vulnerable to man-in-the-middle attacks and credential theft.</p>
+                        <p><strong>AEGIS-AD Remediation:</strong> AEGIS-AD can configure Group Policy to enforce RDP hardening, including requiring Network Level Authentication, TLS 1.2 security, and high encryption levels.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Privilege Escalation Paths -->
+            <div class='category-section'><h2>Privilege Escalation Paths</h2>
+                <div class="finding-card">
+                    <div class="finding-header severity-critical">
+                        <span class="severity-badge">Critical</span>
+                        <h3>DCSync Rights for Non-Administrative Accounts</h3>
+                    </div>
+                    <div class="finding-content">
+                        <p><strong>Description:</strong> 2 non-administrative accounts have been granted DCSync rights, allowing them to perform domain controller replication operations.</p>
+                        <p><strong>Impact:</strong> Accounts with DCSync rights can extract password hashes for all domain accounts, including Domain Admins, effectively compromising the entire domain.</p>
+                        <p><strong>AEGIS-AD Remediation:</strong> AEGIS-AD will remove DCSync rights from unauthorized accounts and implement proper monitoring for any future attempts to assign these permissions.</p>
+                    </div>
+                </div>
+                
+                <div class="finding-card">
+                    <div class="finding-header severity-medium">
+                        <span class="severity-badge">Medium</span>
+                        <h3>Shadow Admin Accounts</h3>
+                    </div>
+                    <div class="finding-content">
+                        <p><strong>Description:</strong> Found 3 accounts with indirect paths to administrative privileges through nested group memberships or permissions.</p>
+                        <p><strong>Impact:</strong> Shadow admin accounts often bypass security controls and monitoring focused on well-known administrative groups, allowing attackers to maintain persistence with less chance of detection.</p>
+                        <p><strong>AEGIS-AD Remediation:</strong> AEGIS-AD can identify and remediate all shadow admin paths while implementing proper privileged access management practices.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Lateral Movement Opportunities -->
+            <div class='category-section'><h2>Lateral Movement Opportunities</h2>
+                <div class="finding-card">
+                    <div class="finding-header severity-high">
+                        <span class="severity-badge">High</span>
+                        <h3>Excessive Administrative Local Group Memberships</h3>
+                    </div>
+                    <div class="finding-content">
+                        <p><strong>Description:</strong> Found excessive administrative local group memberships across multiple systems, with several domain groups granted local administrator access to multiple machine types.</p>
+                        <p><strong>Impact:</strong> Excessive local administrator rights enable lateral movement and privilege escalation, as attackers can compromise one account and move freely among systems where that account has administrative access.</p>
+                        <p><strong>AEGIS-AD Remediation:</strong> AEGIS-AD can implement a least-privilege approach to local administrative access, removing unnecessary rights and implementing Just-In-Time administration where appropriate.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Hybrid/Cloud AD Issues -->
+            <div class='category-section'><h2>Hybrid/Cloud AD Issues</h2>
+                <div class="finding-card">
+                    <div class="finding-header severity-informational">
+                        <span class="severity-badge">Informational</span>
+                        <h3>Azure AD Connect Privileged Account Sync</h3>
+                    </div>
+                    <div class="finding-content">
+                        <p><strong>Description:</strong> On-premises privileged accounts are being synchronized to Azure AD, creating potential security risks.</p>
+                        <p><strong>Impact:</strong> Synchronizing privileged on-premises accounts to Azure AD could expand the attack surface for these accounts, especially if they're used for cloud authentication.</p>
+                        <p><strong>AEGIS-AD Remediation:</strong> AEGIS-AD can implement filtering to prevent critical on-premises accounts from being synchronized to Azure AD while maintaining necessary hybrid functionality.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Generated by Argus-AD - The Active Directory Security Assessment Tool</p>
+            <p>© 2025 MottaSec - <a href="https://github.com/MottaSec/Argus-AD">https://github.com/MottaSec/Argus-AD</a></p>
+        </div>
+    </div>
+</body>
+</html> 
