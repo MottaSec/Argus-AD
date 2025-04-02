@@ -7,7 +7,7 @@
 Argus-AD is a comprehensive Active Directory security assessment tool designed for SYSADMINs and IT Admins to identify misconfigurations, privilege escalation paths, lateral movement opportunities, and hybrid identity issues in their Active Directory environments.
 
 [![PowerShell 5.1+](https://img.shields.io/badge/PowerShell-5.1+-blue.svg)](https://github.com/PowerShell/PowerShell)
-[![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](LICENSE)
 
 ## Overview
 
@@ -309,7 +309,9 @@ For questions, support, or to learn more about our AD security solutions:
 
 ## License
 
-Copyright (c) 2025 MottaSec. All rights reserved.
+Copyright (c) 2025 MottaSec.
+
+This project is licensed under the CC BY-NC 4.0 License - see the [LICENSE](LICENSE) file for details.
 
 ## Disclaimer
 
